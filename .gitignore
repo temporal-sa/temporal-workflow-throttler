@@ -216,3 +216,14 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# -----------------------------------------------------------------------------
+# Node / Vite (web/)
+# -----------------------------------------------------------------------------
+node_modules/
+.vite/
+.eslintcache
+*.log
+web/.cache/
+web/.env.local
+web/.env.*.local

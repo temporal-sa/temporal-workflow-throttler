@@ -1,0 +1,28 @@
+[project]
+name = "temporal-workflow-throttler"
+version = "0.1.0"
+description = "Durable, scalable semaphore/resource-lock throttler for Temporal workflows. Each held permit is its own workflow execution; Temporal's workflow-ID uniqueness IS the lock."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "temporalio>=1.27.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "python-dotenv>=1.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+asyncio_default_test_loop_scope = "function"
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.uv]
+package = false

@@ -4,6 +4,8 @@ A reusable, durable, scalable throttler for [Temporal](https://temporal.io) work
 
 The trick: each held permit is **its own child workflow**, and its workflow id (e.g. `permit:gpu-pool:gpu-2`) is the lock. Temporal does not allow two running workflows with the same id, so an attempt to start a second child for an already held slot fails atomically with `WorkflowAlreadyStartedError`. The library has zero activities, no central limiter, no Redis, and no shared state outside Temporal itself.
 
+![UI](images/ui.png)
+
 ## You will need
 
 | Tool | Purpose |

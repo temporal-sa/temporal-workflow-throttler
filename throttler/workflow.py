@@ -26,7 +26,7 @@ from datetime import timedelta
 from typing import AsyncIterator, Sequence
 
 from temporalio import workflow
-from temporalio.exceptions import WorkflowAlreadyStartedError
+from temporalio.exceptions import FailureError, WorkflowAlreadyStartedError
 from temporalio.workflow import ParentClosePolicy
 
 from throttler.config import DEFAULT_BACKOFF, DEFAULT_LEASE, permit_workflow_id
@@ -59,7 +59,6 @@ class PermitSlotWorkflow:
 
     def __init__(self) -> None:
         self._released: bool = False
-        self._input: PermitSlotInput | None = None
 
     @workflow.signal(name="release")
     def release(self) -> None:
@@ -71,7 +70,6 @@ class PermitSlotWorkflow:
 
     @workflow.run
     async def run(self, input: PermitSlotInput) -> str:
-        self._input = input
         workflow.logger.info(
             "permit acquired",
             extra={"resource": input.resource, "slot": input.slot},
@@ -148,13 +146,20 @@ class Semaphore:
         ``backoff`` and retries. This is could be more sophisticated or tailored
         to use case.
         """
-        slot = await self._acquire_one(lease=lease, backoff=backoff)
+        slot, run_id = await self._acquire_one(lease=lease, backoff=backoff)
         try:
             yield slot
         finally:
-            await self._release(slot)
+            await self._release(slot, run_id)
 
-    async def _acquire_one(self, *, lease: timedelta, backoff: timedelta) -> str:
+    async def _acquire_one(
+        self, *, lease: timedelta, backoff: timedelta
+    ) -> tuple[str, str]:
+        """Returns ``(slot_name, run_id)``. The ``run_id`` is the specific
+        execution we just started so that ``_release`` can target *that* run
+        rather than whichever execution happens to hold the slot's workflow id
+        at release time. Without this pin, a release issued after our lease
+        expired could silently revoke a subsequent acquirer's permit."""
         rng = workflow.random()
         lease_seconds = lease.total_seconds()
         while True:
@@ -163,7 +168,7 @@ class Semaphore:
             for slot in order:
                 wf_id = permit_workflow_id(self._resource, slot)
                 try:
-                    await workflow.start_child_workflow(
+                    handle = await workflow.start_child_workflow(
                         PermitSlotWorkflow.run,
                         PermitSlotInput(
                             resource=self._resource,
@@ -174,18 +179,31 @@ class Semaphore:
                         task_queue=self._task_queue,
                         parent_close_policy=ParentClosePolicy.ABANDON,
                     )
-                    return slot
+                    run_id = handle.first_execution_run_id
+                    assert run_id is not None, (
+                        "start_child_workflow returned without a run_id"
+                    )
+                    return slot, run_id
                 except WorkflowAlreadyStartedError:
                     continue
             await workflow.sleep(backoff)
 
-    async def _release(self, slot: str) -> None:
+    async def _release(self, slot: str, run_id: str) -> None:
+        """Send the release signal pinned to ``run_id`` so it cannot land on a
+        later acquirer's execution. If the targeted run already finished
+        (e.g. lease auto-expiry), the signal raises a ``FailureError`` which
+        we treat as a no-op since the slot is already free."""
         wf_id = permit_workflow_id(self._resource, slot)
+        handle = workflow.get_external_workflow_handle(wf_id, run_id=run_id)
         try:
-            handle = workflow.get_external_workflow_handle(wf_id)
             await handle.signal("release")
-        except Exception as e:
-            workflow.logger.warning(
-                "release signal failed - relying on lease expiry",
-                extra={"resource": self._resource, "slot": slot, "error": str(e)},
+        except FailureError as e:
+            workflow.logger.info(
+                "release signal target already finished (lease likely expired)",
+                extra={
+                    "resource": self._resource,
+                    "slot": slot,
+                    "run_id": run_id,
+                    "error": str(e),
+                },
             )

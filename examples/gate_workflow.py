@@ -15,7 +15,7 @@ from datetime import timedelta
 
 from temporalio import workflow
 
-from throttler.workflow import Semaphore
+from throttler.semaphore import Semaphore
 
 GATE_RESOURCE = "app-gate"
 DEFAULT_GATE_CAPACITY = 4

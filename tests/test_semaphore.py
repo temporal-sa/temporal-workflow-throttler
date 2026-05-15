@@ -17,7 +17,8 @@ from temporalio.worker import Worker
 
 from tests.conftest import with_env
 from throttler.config import permit_workflow_id
-from throttler.workflow import PermitSlotWorkflow, Semaphore
+from throttler.semaphore import Semaphore
+from throttler.workflow import PermitSlotWorkflow
 
 TASK_QUEUE = "throttler-tq-semaphore-test"
 

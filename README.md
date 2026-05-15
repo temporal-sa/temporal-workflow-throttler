@@ -99,7 +99,8 @@ What's covered:
 
 ```
 throttler/                  reusable library (zero activities)
-  workflow.py               PermitSlotWorkflow + Semaphore helper class
+  workflow.py               PermitSlotWorkflow definition (worker registers this)
+  semaphore.py              Semaphore helper class (app workflows import this)
   config.py                 connection helper + task queue + defaults
 examples/                   three demo workflows + simulated activities
   gpu_workflow.py           resource-lock scenario

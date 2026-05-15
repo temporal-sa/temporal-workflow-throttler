@@ -15,7 +15,7 @@ from datetime import timedelta
 
 from temporalio import workflow
 
-from throttler.workflow import Semaphore
+from throttler.semaphore import Semaphore
 
 OCR_RESOURCE = "ocr-pool"
 EMBED_RESOURCE = "embed-pool"

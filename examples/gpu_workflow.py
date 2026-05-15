@@ -17,7 +17,7 @@ from datetime import timedelta
 
 from temporalio import workflow
 
-from throttler.workflow import Semaphore
+from throttler.semaphore import Semaphore
 
 GPU_RESOURCE = "gpu-pool"
 DEFAULT_GPU_CAPACITY = 4

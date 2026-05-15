@@ -11,11 +11,8 @@ limiter because signal load distributes across N independent slot workflows.
 Temporal's own enforcement of workflow-ID uniqueness is the source of truth
 for "is this slot free?", atomic by construction.
 
-The library has **no activities** -- the entire acquire/release dance happens
-in pure workflow code. (For very large pools, ``len(slots) > 32``, a future
-"list held slots via Visibility" optimisation would be the only thing to
-need an activity, since Visibility queries require a ``Client``. Skipped in
-v1 because random-probe is fast enough at demo pool sizes.)
+The library has **no activities** the entire acquire/release dance happens
+in pure workflow code.
 """
 
 from __future__ import annotations
